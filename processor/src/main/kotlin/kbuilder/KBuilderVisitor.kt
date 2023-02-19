@@ -1,10 +1,13 @@
 package kbuilder
 
+import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSVisitorVoid
 import com.google.devtools.ksp.symbol.Nullability.NULLABLE
+import com.google.devtools.ksp.symbol.Origin
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
@@ -30,11 +33,9 @@ class KBuilderVisitor(
                 Prop(
                     name = it.toString(),
                     type = it.type.toString(),
-                    isNullable = it.type.resolve().nullability == NULLABLE
+                    isNullable = isNullable(it)
                 )
             }.toList()
-
-//        logger.warn("props: $properties")
 
         val propertyMap = properties.zipWithNext().toMap()
         val context = Context(packageName, className, builderName, properties, propertyMap)
@@ -69,6 +70,19 @@ class KBuilderVisitor(
             addType(classBuilder)
         }.build()
         fileSpec.writeTo(codeGenerator, true)
+    }
+
+    @OptIn(KspExperimental::class)
+    private fun isNullable(property: KSPropertyDeclaration): Boolean {
+
+        val annotationPresent = property.annotations.toList()
+            .firstOrNull { it.shortName.asString() == NotNull::class.simpleName } != null
+
+        return when {
+            annotationPresent -> false
+            property.type.origin == Origin.JAVA -> true
+            else -> property.type.resolve().nullability == NULLABLE
+        }
     }
 
     private fun createInterfaceList(ctx: Context): List<ClassName> {
@@ -176,15 +190,18 @@ class KBuilderVisitor(
             .build()
     }
 
-    private fun createCompanionObject(ctx: Context) = TypeSpec.companionObjectBuilder()
-        // add the static builder() extension method
-        .addFunction(
-            FunSpec.builder("builder")
-                .returns(ClassName(ctx.packageName, ctx.properties.first().name.cap()))
-                .addCode("return ${ctx.builderName}()")
-                .addAnnotation(JvmStatic::class)
-                .build()
-        ).build()
+    private fun createCompanionObject(ctx: Context): TypeSpec {
+        val returnClass = ctx.properties.firstOrNull() { !it.isNullable }?.name?.cap() ?: "Build"
+        return TypeSpec.companionObjectBuilder()
+            // add the static builder() extension method
+            .addFunction(
+                FunSpec.builder("builder")
+                    .returns(ClassName(ctx.packageName, returnClass))
+                    .addCode("return ${ctx.builderName}()")
+                    .addAnnotation(JvmStatic::class)
+                    .build()
+            ).build()
+    }
 }
 
 // String.capitalize() is deprecated, creating our own version here instead

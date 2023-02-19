@@ -12,11 +12,11 @@ buildscript {
 
 subprojects {
     tasks.withType<KotlinCompile> {
-        kotlinOptions.jvmTarget = "17"
+        kotlinOptions.jvmTarget = "11"
     }
 
     tasks.withType<JavaCompile> {
-        sourceCompatibility = "17"
-        targetCompatibility = "17"
+        sourceCompatibility = "11"
+        targetCompatibility = "11"
     }
 }

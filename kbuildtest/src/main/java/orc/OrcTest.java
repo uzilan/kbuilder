@@ -8,10 +8,7 @@ public class OrcTest {
                 .age(3)
                 .build();
 
-        Orc vincent = OrcBuilder.builder().name("Vince").age(12).build();
-
         System.out.println("uruk: " + uruk);
-        System.out.println("vincent: " + vincent);
     }
 }
 
