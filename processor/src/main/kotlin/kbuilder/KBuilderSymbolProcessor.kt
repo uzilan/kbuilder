@@ -15,13 +15,12 @@ class KBuilderSymbolProcessor(
     private var invoked = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-
         val symbols = resolver.getSymbolsWithAnnotation(Builder::class.qualifiedName!!)
         val (valid, invalid) = symbols.partition { it.validate() }
         if (invoked) return invalid
 
         val declarations = valid.filterIsInstance<KSClassDeclaration>()
-        val visitor = KBuilderVisitor(logger, codeGenerator)
+        val visitor = KBuilderVisitor(codeGenerator)
         declarations.forEach { it.accept(visitor, Unit) }
 
         invoked = true
