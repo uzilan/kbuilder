@@ -65,6 +65,7 @@ class KBuilderVisitor(
         fileSpec.writeTo(codeGenerator, true)
     }
 
+    // create the Build interface
     private fun createBuildInterface(ctx: Context): TypeSpec {
         return TypeSpec.interfaceBuilder("Build")
             .addFunctions(
@@ -92,6 +93,7 @@ class KBuilderVisitor(
             ).build()
     }
 
+    // create an interface for a mandatory property
     private fun createPropertyInterface(ctx: Context, prop: Prop, returnClass: String): TypeSpec {
         return TypeSpec.interfaceBuilder(prop.name.cap())
             .addFunction(
@@ -107,6 +109,7 @@ class KBuilderVisitor(
             ).build()
     }
 
+    // create a list of interfaces to be implemented by the builder class
     private fun createInterfaceList(ctx: Context): List<ClassName> {
         return ctx.properties
             .filter { !it.isNullable }
@@ -114,14 +117,19 @@ class KBuilderVisitor(
             ClassName(ctx.packageName, "Build")
     }
 
+    // create a private constructor
     private fun createPrivateConstructor(): FunSpec {
         return FunSpec.constructorBuilder()
             .addModifiers(PRIVATE)
             .build()
     }
 
+    // create the build method that creates the class instance,
+    // using the values set in the builder as arguments
     private fun createBuildMethod(ctx: Context): FunSpec {
         val values = ctx.properties.joinToString(", ") { prop ->
+            // non-nullable properties must have been given a value using
+            // the mandatory property methods
             if (prop.isNullable) prop.name else "${prop.name}!!"
         }
 
@@ -132,6 +140,7 @@ class KBuilderVisitor(
             .build()
     }
 
+    // create the properties in the builder class to be used by the build method
     private fun createProperties(ctx: Context): List<PropertySpec> {
         return ctx.properties.map {
             PropertySpec.builder(it.name, ClassName(ctx.packageName, it.type).copy(nullable = true))
@@ -142,6 +151,7 @@ class KBuilderVisitor(
         }.toList()
     }
 
+    // implement the interface property methods
     private fun createPropertyMethods(ctx: Context): List<FunSpec> {
         return ctx.properties.map { prop ->
             val returnClass = findReturnType(ctx, prop)
@@ -154,6 +164,7 @@ class KBuilderVisitor(
                         ClassName(ctx.packageName, prop.type),
                     ).build(),
                 ).addCode(
+                    // set the value of the property in the builder class, then return this
                     """this.${prop.name} = ${prop.name} 
                       |return this
                     """.trimMargin(),
